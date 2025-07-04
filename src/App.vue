@@ -5,9 +5,9 @@
 
 
 <script>
-import Login from './components/Login.vue'
-import Register from './components/Register.vue'
-import ThuVien from './components/ThuVien.vue'
+import Login from './components/Login/Login.vue'
+import Register from './components/Login/Register.vue'
+import ThuVien from './components/QuanLySach/ThuVien.vue'
 
 export default {
   components: { Login, Register,ThuVien },
