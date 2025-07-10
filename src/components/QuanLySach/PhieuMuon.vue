@@ -146,8 +146,8 @@
 
 <script setup>
 import { ref, onMounted, watch, reactive } from 'vue'
-import axios from 'axios'
 import { useToast } from 'vue-toastification'
+import axiosInstance from '../api/axiosInstance'
 
 const toast = useToast()
 
@@ -205,14 +205,25 @@ function tang(id) {
 } 
 
 async function loadPhieuMuon() {
-  const res = await axios.get('http://localhost:8080/api/phieu-muon/getAll')
-  phieuMuons.value = res.data
-  console.log(res.data)
+  try {
+    const res = await axiosInstance.get('/api/phieu-muon/getAll');
+    phieuMuons.value = res.data;
+    console.log(res.data);
+  } catch (err) {
+    console.error("Không load được phiếu mượn:", err);
+    alert("Phiên đăng nhập hết hạn hoặc không có quyền!");
+  }
 }
 
 async function loadKhachHang() {
-  const res = await axios.get('http://localhost:8080/api/khach-hang/getAll')
-  khachHangs.value = res.data
+  try {
+    const res = await axiosInstance.get('/api/khach-hang/getAll')
+    khachHangs.value = res.data
+    console.log(res.data)
+  } catch (err) {
+    console.log("Không load được khách hàng", err)
+    alert("Phiên đăng nhập hết hạn hoặc không có quyền!");
+  }
 }
 
 function formatDate(dateStr) {
@@ -225,12 +236,12 @@ function formatDate(dateStr) {
 }
 
 async function xemKhachMuon(sach) {
-  try{
-    sachMuon.value=sach
-    const res = await axios.get(`http://localhost:8080/api/phieu-muon-chi-tiet/khach-muon-sach/${sach.id}`)
-    danhSachKhachMuon.value=res.data
-    hienModalKhachMuon.value=true
-  }catch(err){
+  try {
+    sachMuon.value = sach
+    const res = await axiosInstance.get(`/api/phieu-muon-chi-tiet/khach-muon-sach/${sach.id}`)
+    danhSachKhachMuon.value = res.data
+    hienModalKhachMuon.value = true
+  } catch (err) {
     console.log(err)
     toast.error('Lỗi khi tải danh sách')
   }
@@ -246,11 +257,17 @@ function moModalThemMoi() {
     trangThai: true
   }
 }
+
 async function themPhieuMoi() {
-  await axios.post(`http://localhost:8080/api/phieu-muon/add`, phieuMoi.value)
-  toast.success('Thêm thành công')
-  hienModalThem.value = false
-  await loadPhieuMuon()
+  try {
+    await axiosInstance.post(`/api/phieu-muon/add`, phieuMoi.value)
+    toast.success('Thêm thành công')
+    hienModalThem.value = false
+    await loadPhieuMuon()
+  } catch (err) {
+    toast.error('Lỗi khi thêm phiếu mượn')
+    console.error(err)
+  }
 }
 
 function suaPhieu(pm) {
@@ -267,17 +284,27 @@ function suaPhieu(pm) {
 }
 
 async function capNhatPhieu() {
-  await axios.put(`http://localhost:8080/api/phieu-muon/update/${phieuDangSua.value.id}`, phieuDangSua.value)
-  toast.success('Cập nhật thành công')
-  hienModalSua.value = false
-  await loadPhieuMuon()
+  try {
+    await axiosInstance.put(`/api/phieu-muon/update/${phieuDangSua.value.id}`, phieuDangSua.value)
+    toast.success('Cập nhật thành công')
+    hienModalSua.value = false
+    await loadPhieuMuon()
+  } catch (err) {
+    toast.error('Lỗi khi cập nhật phiếu mượn')
+    console.error(err)
+  }
 }
 
 async function xoaPhieu(pm) {
   if (confirm(`Bạn có muốn xóa phiếu: ${pm.maPhieuMuon}?`)) {
-    await axios.delete(`http://localhost:8080/api/phieu-muon/delete/${pm.id}`)
-    toast.success('Xóa thành công')
-    await loadPhieuMuon()
+    try {
+      await axiosInstance.delete(`/api/phieu-muon/delete/${pm.id}`)
+      toast.success('Xóa thành công')
+      await loadPhieuMuon()
+    } catch (err) {
+      toast.error('Lỗi khi xóa phiếu mượn')
+      console.error(err)
+    }
   }
 }
 
@@ -295,8 +322,11 @@ function moModalChonSach(idPhieu) {
   hienModalChonSach.value = true
   idsDaChon.value = []
   ngayHetHan.value = null
-  axios.get('http://localhost:8080/api/sach/getAll').then(res => {
+  axiosInstance.get('/api/sach/getAll').then(res => {
     danhSachSach.value = res.data
+  }).catch(err => {
+    toast.error('Không thể tải danh sách sách')
+    console.error(err)
   })
 }
 
@@ -323,14 +353,14 @@ async function luuChiTietPhieuMuon() {
       ngayHetHan: ngayHetHan.value,
     }
     console.log('Gửi dữ liệu:', body)
-    await axios.post('http://localhost:8080/api/phieu-muon-chi-tiet/add', body)
+    await axiosInstance.post('/api/phieu-muon-chi-tiet/add', body)
     toast.success('Thêm sách thành công')
     hienModalChonSach.value = false
     await loadPhieuMuon()
   } catch (err) {
-    const mesage = err.response?.data?.message || err.response?.data || "Lỗi không xác định";
+    const mesage = err.response?.data?.message || err.response?.data || "Lỗi không xác định"
     console.log(err)
-    toast.error(mesage);
+    toast.error(mesage)
   }
 }
 

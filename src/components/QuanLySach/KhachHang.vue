@@ -123,27 +123,44 @@
 </template>
 <script setup>
 import { ref, onMounted, watch, reactive } from 'vue'
-import axios from 'axios'
 import { useToast } from 'vue-toastification'
+import axiosInstance from '../api/axiosInstance'
 
 const toast = useToast()
-
 const emit = defineEmits(['sauKhiTraSach'])
 
 const phieuMuons = ref([])
+const danhSachSach = ref([])
 const khachHangs = ref([])
 const idsDaChon = ref([])
+const danhSachKhachMuon = ref([])
 const sachDaMuon = ref([])
 
 const soLuongTheoSach = reactive({})
 
+const hienModalChonSach = ref(false)
+const hienModalThem = ref(false)
+const hienModalSua = ref(false)
+const hienModalKhachMuon = ref(false)
 const hienModalThemKh = ref(false)
 const hienModalSuaKh = ref(false)
 const hienModalSachDaMuon = ref(false)
 
+const phieuMuonIdChonSach = ref(null)
+const ngayHetHan = ref(null)
+
+const phieuMoi = ref({})
+const phieuDangSua = ref({})
+const sachMuon = ref({})
 const khachHangMoi = ref({})
 const khachHangSua = ref({})
 const khachHangMuon = ref({})
+
+const props = defineProps(['reloadKey'])
+
+watch(() => props.reloadKey, async () => {
+  await loadPhieuMuon()
+})
 
 watch(idsDaChon, (newIds) => {
   newIds.forEach(id => {
@@ -158,18 +175,30 @@ onMounted(async () => {
   await loadKhachHang()
 })
 
+
 const khachHangHeader = ['STT','Mã KH','Tên KH','Địa chỉ','Email','SĐT','Hành động']
 const sachMuonHeader = ['STT','Mã sách','Tên sách','Tác giả','Nhà xuất bản','Ngày mượn','Ngày hết hạn','Số lượng mượn','Hành động']
 
+
 async function loadPhieuMuon() {
-  const res = await axios.get('http://localhost:8080/api/phieu-muon/getAll')
-  phieuMuons.value = res.data
-  console.log(res.data)
+  try {
+    const res = await axiosInstance.get('/api/phieu-muon/getAll')
+    phieuMuons.value = res.data
+    console.log(res.data)
+  } catch (err) {
+    console.error("Không load được phiếu mượn:", err)
+    alert("Phiên đăng nhập hết hạn hoặc không có quyền!")
+  }
 }
 
 async function loadKhachHang() {
-  const res = await axios.get('http://localhost:8080/api/khach-hang/getAll')
-  khachHangs.value = res.data
+  try {
+    const res = await axiosInstance.get('/api/khach-hang/getAll')
+    khachHangs.value = res.data
+  } catch (err) {
+    console.log("Không load được khách hàng", err)
+    alert("Phiên đăng nhập hết hạn hoặc không có quyền!")
+  }
 }
 
 function formatDate(dateStr) {
@@ -180,6 +209,20 @@ function formatDate(dateStr) {
   const yyyy = date.getFullYear()
   return `${dd}/${mm}/${yyyy}`
 }
+
+function suaPhieu(pm) {
+  const khach = khachHangs.value.find(kh => kh.tenKhachHang === pm.khachHang)
+  phieuDangSua.value = {
+    id: pm.id,
+    maPhieuMuon: pm.maPhieuMuon,
+    ngayMuon: pm.ngayMuon,
+    ngayTra: pm.ngayTra,
+    trangThai: pm.trangThai,
+    khachHang: khach ? khach.id : null
+  }
+  hienModalSua.value = true
+}
+
 
 function moModalThemMoiKh() {
   hienModalThemKh.value = true
@@ -193,11 +236,22 @@ function moModalThemMoiKh() {
 }
 
 async function themKhachHang() {
-  await axios.post(`http://localhost:8080/api/khach-hang/add`, khachHangMoi.value)
-  toast.success('Thêm thành công')
-  hienModalThemKh.value = false
-  await loadKhachHang()
+  try {
+    await axiosInstance.post(`/api/khach-hang/add`, khachHangMoi.value);
+    toast.success('Thêm khách hàng thành công');
+    hienModalThemKh.value = false;
+    await loadKhachHang();
+  } catch (err) {
+    if (err.response && err.response.status === 403) {
+      toast.error('Bạn không có quyền thực hiện thao tác này!');
+    } else {
+      const message = err.response?.data?.message || err.response?.data || 'Đã xảy ra lỗi';
+      toast.error(`Thêm thất bại: ${message}`);
+    }
+    console.error('Thêm KH lỗi:', err);
+  }
 }
+
 
 function suaKhachHang(kh) {
   khachHangSua.value = {...kh}
@@ -205,53 +259,68 @@ function suaKhachHang(kh) {
 }
 
 async function capNhatKhachHang() {
-  await axios.put(`http://localhost:8080/api/khach-hang/update/${khachHangSua.value.id}`, khachHangSua.value)
-  toast.success('Cập nhật thành công')
-  hienModalSuaKh.value = false
-  await loadKhachHang()
+  try{
+    await axiosInstance.put(`/api/khach-hang/update/${khachHangSua.value.id}`, khachHangSua.value)
+    toast.success('Cập nhật thành công')
+    hienModalSuaKh.value = false
+    await loadKhachHang() 
+  }catch(err){
+    if (err.response && err.response.status === 403) {
+      toast.error('Bạn không có quyền thực hiện thao tác này!');
+    } else {
+      const message = err.response?.data?.message || err.response?.data || 'Đã xảy ra lỗi';
+      toast.error(`Cập nhật thất bại: ${message}`);
+    }
+    console.error('Cập nhật KH lỗi:', err);
+  }
 }
 
 async function xoaKhachHang(kh) {
   if (confirm(`Bạn có muốn xóa khách: ${kh.maKhachHang}?`)) {
-    await axios.delete(`http://localhost:8080/api/khach-hang/delete/${kh.id}`)
-    toast.success('Xóa thành công')
-    await loadKhachHang()
+    try{
+      await axiosInstance.delete(`/api/khach-hang/delete/${kh.id}`)
+      toast.success('Xóa thành công')
+      await loadKhachHang()
+    }catch(err){
+      if (err.response && err.response.status === 403) {
+      toast.error('Bạn không có quyền thực hiện thao tác này!');
+    } else {
+      const message = err.response?.data?.message || err.response?.data || 'Đã xảy ra lỗi';
+      toast.error(`Xóa thất bại: ${message}`);
+    }
+      console.error('Xóa KH lỗi:', err); 
+    }
   }
 }
 
 async function xemSachDaMuon(kh) {
-    khachHangMuon.value = kh
-    try{
-        const res = await axios.get(`http://localhost:8080/api/phieu-muon-chi-tiet/sach-da-muon/${kh.id}`)
-        sachDaMuon.value=res.data
-        hienModalSachDaMuon.value=true
-    }catch(err){
-        toast.error('Lỗi khi tải danh sách')
-        console.log(err)
-    }
+  khachHangMuon.value = kh
+  try {
+    const res = await axiosInstance.get(`/api/phieu-muon-chi-tiet/sach-da-muon/${kh.id}`)
+    sachDaMuon.value = res.data
+    hienModalSachDaMuon.value = true
+  } catch (err) {
+    toast.error('Lỗi khi tải danh sách')
+    console.log(err)
+  }
 }
 
 async function traSach(s) {
   const soLuongDangMuon = s.soLuongSachMuon || 0
   const input = prompt(`Nhập số lượng muốn trả:`)
-
   if (!input) return
-
   const soLuongTra = parseInt(input)
-
   if (isNaN(soLuongTra) || soLuongTra <= 0) {
     toast.error('Số lượng trả không hợp lệ')
     return
   }
-
   if (soLuongTra > soLuongDangMuon) {
     toast.error(`Bạn chỉ có ${soLuongDangMuon} cuốn`)
     return
   }
-
   if (confirm(`Bạn có chắc chắn muốn trả ${soLuongTra} cuốn sách "${s.tenSach}"?`)) {
     try {
-      await axios.put(`http://localhost:8080/api/phieu-muon-chi-tiet/tra-sach/${s.id}?soLuongTra=${soLuongTra}`)
+      await axiosInstance.put(`/api/phieu-muon-chi-tiet/tra-sach/${s.id}?soLuongTra=${soLuongTra}`)
       toast.success('Trả sách thành công')
       await xemSachDaMuon(khachHangMuon.value)
       await loadPhieuMuon()
@@ -260,11 +329,8 @@ async function traSach(s) {
       console.error(error)
     }
   }
-  // Cuối hàm traSach()
   await xemSachDaMuon(khachHangMuon.value)
-  // Phát sự kiện báo cho cha biết
   emit('sauKhiTraSach')
-
 }
 </script>
 <style scoped>
