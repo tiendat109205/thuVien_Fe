@@ -2,7 +2,7 @@
   <div class="container">
     <div class="list">
       <h2>Danh sách phiếu mượn</h2>
-      <button class="btn them-moi" @click="moModalThemMoi">+ Thêm phiếu mượn</button>
+      <button class="btn them-moi" @click="moModalThemMoi">+ Tạo phiếu mượn</button>
       <div class="row header">
         <div v-for="(title,i) in phieuMuonHeader" :key="i">{{ title }}</div>
       </div>
@@ -16,41 +16,12 @@
           {{ pm.trangThai === true || pm.trangThai === 'true' ? 'Đã trả' : 'Chưa trả' }}
         </div>
         <div class="hanh-dong">
-          <button class="btn sua" @click="suaPhieu(pm)">Sửa</button>
-          <button class="btn xoa" @click="xoaPhieu(pm)">Xóa</button>
+          <button v-if="isAdmin" class="btn xoa" @click="xoaPhieu(pm)">Xóa</button>
           <button class="btn them-sach" @click="moModalChonSach(pm.id)">+ Thêm sách</button>
         </div>
       </div>
     </div>
-    <!-- Modal Sửa -->
-    <div v-if="hienModalSua" class="modal-overlay" @click.self="hienModalSua = false">
-      <div class="modal-content">
-        <h3>Sửa phiếu mượn</h3>
-        <div class="form-group">
-          <label>Mã phiếu:</label>
-          <input v-model="phieuDangSua.maPhieuMuon" />
-        </div>
-        <div class="form-group">
-          <label>Ngày mượn:</label>
-          <input type="date" v-model="phieuDangSua.ngayMuon" />
-        </div>
-        <div class="form-group">
-          <label>Khách hàng:</label>
-          <input type="text" :value="layTenKhachHang(phieuDangSua.khachHang)" disabled />
-        </div>
-        <div class="form-group">
-          <label>Trạng thái:</label>
-          <select v-model="phieuDangSua.trangThai">
-            <option :value="true">Đã trả</option>
-            <option :value="false">Chưa trả</option>
-          </select>
-        </div>
-        <div style="text-align:right;">
-          <button class="btn-luu" @click="capNhatPhieu">Lưu</button>
-          <button class="btn-huy" @click="hienModalSua = false" style="margin-left:10px;">Hủy</button>
-        </div>
-      </div>
-    </div>
+  
     <!-- Modal thêm -->
     <div v-if="hienModalThem" class="modal-overlay" @click.self="hienModalThem = false">
       <div class="modal-content">
@@ -141,14 +112,57 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal bắt buộc nhập thông tin KH khi chưa có -->
+      <div v-if="hienModalNhapThongTinKh" class="modal-overlay" @click.self="hienModalNhapThongTinKh = false">
+        <div class="modal-content">
+          <h3>Vui lòng nhập thông tin khách hàng để tiếp tục mượn sách</h3>
+          <div class="form-group">
+            <label>Mã KH:</label>
+            <input v-model="khachHangMoi.maKhachHang" />
+          </div>
+          <div class="form-group">
+            <label>Tên KH:</label>
+            <input v-model="khachHangMoi.tenKhachHang" />
+          </div>
+          <div class="form-group">
+            <label>Địa chỉ:</label>
+            <input v-model="khachHangMoi.diaChi" />
+          </div>
+          <div class="form-group">
+            <label>Email:</label>
+            <input v-model="khachHangMoi.email" />
+          </div>
+          <div class="form-group">
+            <label>SDT:</label>
+            <input v-model="khachHangMoi.sdt" />
+          </div>
+          <div style="text-align:right;">
+            <button class="btn-luu" @click="themKhachHang">Lưu</button>
+            <button class="btn-huy" @click="hienModalNhapThongTinKh = false" style="margin-left:10px;">Hủy</button>
+          </div>
+        </div>
+      </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
-import axiosInstance from '../api/axiosInstance'
+import {
+  addChiTietPhieuMuon,
+  addPhieuMuon,
+  deletePhieuMuon,
+  getAllKhachHang,
+  getAllPhieuMuon,
+  getAllSach,
+  xemKhachMuonn,
+  checkThongTinKhachHang,
+  addKhachHang
+} from '../api/api'
+import { hasRole } from '../api/axiosInstance'
 
+const isAdmin = hasRole("ROLE_ADMIN")
 const toast = useToast()
 
 const phieuMuons = ref([])
@@ -156,19 +170,18 @@ const danhSachSach = ref([])
 const khachHangs = ref([])
 const idsDaChon = ref([])
 const danhSachKhachMuon = ref([])
-
 const soLuongTheoSach = reactive({})
 
+const hienModalNhapThongTinKh = ref(false)
 const hienModalChonSach = ref(false)
 const hienModalThem = ref(false)
-const hienModalSua = ref(false)
 const hienModalKhachMuon = ref(false)
 
 const phieuMuonIdChonSach = ref(null)
 const ngayHetHan = ref(null)
 
+const khachHangMoi = ref({})
 const phieuMoi = ref({})
-const phieuDangSua = ref({})
 const sachMuon = ref({})
 
 const props = defineProps(['reloadKey'])
@@ -206,23 +219,21 @@ function tang(id) {
 
 async function loadPhieuMuon() {
   try {
-    const res = await axiosInstance.get('/api/phieu-muon/getAll');
-    phieuMuons.value = res.data;
-    console.log(res.data);
+    const res = await getAllPhieuMuon()
+    phieuMuons.value = res.data
   } catch (err) {
-    console.error("Không load được phiếu mượn:", err);
-    alert("Phiên đăng nhập hết hạn hoặc không có quyền!");
+    toast.error("Lỗi khi load phiếu mượn")
+    console.log(err)
   }
 }
 
 async function loadKhachHang() {
   try {
-    const res = await axiosInstance.get('/api/khach-hang/getAll')
+    const res = await getAllKhachHang()
     khachHangs.value = res.data
-    console.log(res.data)
   } catch (err) {
-    console.log("Không load được khách hàng", err)
-    alert("Phiên đăng nhập hết hạn hoặc không có quyền!");
+    toast.error("Lỗi khi load khách hàng")
+    console.log(err)
   }
 }
 
@@ -238,72 +249,89 @@ function formatDate(dateStr) {
 async function xemKhachMuon(sach) {
   try {
     sachMuon.value = sach
-    const res = await axiosInstance.get(`/api/phieu-muon-chi-tiet/khach-muon-sach/${sach.id}`)
+    const res = await xemKhachMuonn(sach.id)
     danhSachKhachMuon.value = res.data
     hienModalKhachMuon.value = true
   } catch (err) {
+    toast.error("Lỗi xem khách mượn")
     console.log(err)
-    toast.error('Lỗi khi tải danh sách')
   }
 }
 
-function moModalThemMoi() {
-  hienModalThem.value = true
-  phieuMoi.value = {
-    maPhieuMuon: '',
-    ngayMuon: '',
-    ngayTra: '',
-    khachHang: '',
-    trangThai: true
+async function moModalThemMoi() {
+  try {
+    const res = await checkThongTinKhachHang();
+    const daCoThongTin = res.data;
+    console.log("Kết quả check thông tin KH:", res.data);
+
+    if (daCoThongTin === true) {
+      hienModalThem.value = true;
+      phieuMoi.value = {
+        maPhieuMuon: '',
+        ngayMuon: '',
+        ngayTra: '',
+        khachHang: daCoThongTin.id,
+        trangThai: true
+      };
+    } else {
+      hienModalNhapThongTinKh.value = true;
+    }
+  } catch (err) {
+    toast.error("Không thể kiểm tra thông tin tài khoản. Vui lòng đăng nhập lại.");
+    console.error("Chi tiết lỗi khi check thông tin:", err);
   }
 }
 
 async function themPhieuMoi() {
   try {
-    await axiosInstance.post(`/api/phieu-muon/add`, phieuMoi.value)
-    toast.success('Thêm thành công')
+    await addPhieuMuon(phieuMoi.value)
+    toast.success('Tạo phiếu mượn thành công')
     hienModalThem.value = false
     await loadPhieuMuon()
   } catch (err) {
-    toast.error('Lỗi khi thêm phiếu mượn')
-    console.error(err)
+    toast.error("Tạo phiếu thất bại")
+    console.log(err)
   }
 }
 
-function suaPhieu(pm) {
-  const khach = khachHangs.value.find(kh => kh.tenKhachHang === pm.khachHang)
-  phieuDangSua.value = {
-    id: pm.id,
-    maPhieuMuon: pm.maPhieuMuon,
-    ngayMuon: pm.ngayMuon,
-    ngayTra: pm.ngayTra,
-    trangThai: pm.trangThai,
-    khachHang: khach ? khach.id : null
-  }
-  hienModalSua.value = true
+function moModalThemMoiKh() {
+  hienModalNhapThongTinKh.value = true;
+  khachHangMoi.value = {
+    maKhachHang: '',
+    tenKhachHang: '',
+    diaChi: '',
+    email: '',
+    sdt: ''
+  };
 }
 
-async function capNhatPhieu() {
+async function themKhachHang() {
   try {
-    await axiosInstance.put(`/api/phieu-muon/update/${phieuDangSua.value.id}`, phieuDangSua.value)
-    toast.success('Cập nhật thành công')
-    hienModalSua.value = false
-    await loadPhieuMuon()
+    const isUser = hasRole("ROLE_USER")
+    const userId = localStorage.getItem("userId")
+    if (isUser && userId) {
+      khachHangMoi.value.idTaiKhoan = userId
+    }
+    await addKhachHang(khachHangMoi.value)
+    toast.success("Thêm khách hàng thành công")
+    hienModalThemKh.value = false
+    await loadKhachHang()
+    if (isUser) moModalThemMoi()
   } catch (err) {
-    toast.error('Lỗi khi cập nhật phiếu mượn')
-    console.error(err)
+    toast.error("Thêm KH thất bại")
+    console.log(err)
   }
 }
 
 async function xoaPhieu(pm) {
-  if (confirm(`Bạn có muốn xóa phiếu: ${pm.maPhieuMuon}?`)) {
+  if (confirm(`Xóa phiếu ${pm.maPhieuMuon}?`)) {
     try {
-      await axiosInstance.delete(`/api/phieu-muon/delete/${pm.id}`)
-      toast.success('Xóa thành công')
+      await deletePhieuMuon(pm.id)
+      toast.success("Xóa thành công")
       await loadPhieuMuon()
     } catch (err) {
-      toast.error('Lỗi khi xóa phiếu mượn')
-      console.error(err)
+      toast.error("Xóa thất bại")
+      console.log(err)
     }
   }
 }
@@ -312,21 +340,16 @@ function getTrangThaiClass(trangThai) {
   return trangThai === true || trangThai === 'true' ? 'da-tra' : 'chua-tra'
 }
 
-function layTenKhachHang(id) {
-  const kh = khachHangs.value.find(k => k.id === id)
-  return kh ? kh.tenKhachHang : 'Không rõ'
-}
-
 function moModalChonSach(idPhieu) {
   phieuMuonIdChonSach.value = idPhieu
   hienModalChonSach.value = true
   idsDaChon.value = []
   ngayHetHan.value = null
-  axiosInstance.get('/api/sach/getAll').then(res => {
+  getAllSach().then(res => {
     danhSachSach.value = res.data
   }).catch(err => {
-    toast.error('Không thể tải danh sách sách')
-    console.error(err)
+    toast.error("Lỗi khi load sách")
+    console.log(err)
   })
 }
 
@@ -340,7 +363,7 @@ function chonTatCa(event) {
 
 async function luuChiTietPhieuMuon() {
   if (!ngayHetHan.value || idsDaChon.value.length === 0) {
-    toast.error('Vui lòng chọn sách và ngày hết hạn')
+    toast.error('Chọn sách & ngày hết hạn')
     return
   }
   try {
@@ -350,17 +373,15 @@ async function luuChiTietPhieuMuon() {
         sachId: id,
         soLuong: soLuongTheoSach[id] || 1
       })),
-      ngayHetHan: ngayHetHan.value,
+      ngayHetHan: ngayHetHan.value
     }
-    console.log('Gửi dữ liệu:', body)
-    await axiosInstance.post('/api/phieu-muon-chi-tiet/add', body)
-    toast.success('Thêm sách thành công')
+    await addChiTietPhieuMuon(body)
+    toast.success('Mượn sách thành công')
     hienModalChonSach.value = false
     await loadPhieuMuon()
   } catch (err) {
-    const mesage = err.response?.data?.message || err.response?.data || "Lỗi không xác định"
+    toast.error("Thêm chi tiết phiếu thất bại")
     console.log(err)
-    toast.error(mesage)
   }
 }
 
@@ -370,6 +391,7 @@ function resetModalChonSach() {
   ngayHetHan.value = null
 }
 </script>
+
 
 <style scoped>
 .container {
@@ -395,7 +417,7 @@ function resetModalChonSach() {
 }
 .row {
   display: grid;
-  grid-template-columns: 1fr 2fr 3fr 3fr 3fr 3fr 5fr;
+  grid-template-columns: 1fr 2fr 3fr 3fr 3fr 3fr 4fr;
   padding: 8px 0;
   border: 1px solid #eee;
   align-items: center;

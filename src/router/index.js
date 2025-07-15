@@ -4,11 +4,13 @@ import ThuVien from '@/components/QuanLySach/ThuVien.vue';
 import KhachHang from '@/components/QuanLySach/KhachHang.vue';
 import PhieuMuon from '@/components/QuanLySach/PhieuMuon.vue';
 import Unauthorized from '@/components/Login/Unauthorized.vue';
+import Register from '@/components/Login/Register.vue';
 
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
 
+  { path: '/register', component: Register },
   {
     path: '/thu-vien',
     component: ThuVien,
