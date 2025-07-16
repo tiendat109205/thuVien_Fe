@@ -245,10 +245,10 @@ async function taoPhieuMuonNhanh() {
       maPhieuMuon: '',
       ngayMuon: '',
       ngayTra: '',
-      khachHang: thongTin.idKhachHang,
+      khachHang: thongTin.idTaiKhoan,
       trangThai: true
     }
-
+console.log("Data gửi đi:", phieu);
     await addPhieuMuon(phieu)
     toast.success("Tạo phiếu mượn thành công")
     await loadPhieuMuon()

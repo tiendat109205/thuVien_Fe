@@ -1,9 +1,11 @@
 import axios from "axios";
 
+// Sử dụng biến môi trường thay vì hard-code
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:8080"
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
+// Gắn token tự động nếu có
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -12,6 +14,7 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+// Hàm kiểm tra quyền
 export const hasRole = (expectedRole) => {
   return localStorage.getItem("role") === expectedRole;
 };
