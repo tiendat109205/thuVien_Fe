@@ -2,7 +2,7 @@
   <div class="container">
     <div class="list">
       <h2>Danh sách phiếu mượn</h2>
-      <button class="btn them-moi" @click="moModalThemMoi">+ Tạo phiếu mượn</button>
+      <button class="btn them-moi" @click="taoPhieuMuonNhanh">+ Tạo phiếu mượn</button>
       <div class="row header">
         <div v-for="(title,i) in phieuMuonHeader" :key="i">{{ title }}</div>
       </div>
@@ -18,33 +18,6 @@
         <div class="hanh-dong">
           <button v-if="isAdmin" class="btn xoa" @click="xoaPhieu(pm)">Xóa</button>
           <button class="btn them-sach" @click="moModalChonSach(pm.id)">+ Thêm sách</button>
-        </div>
-      </div>
-    </div>
-  
-    <!-- Modal thêm -->
-    <div v-if="hienModalThem" class="modal-overlay" @click.self="hienModalThem = false">
-      <div class="modal-content">
-        <h3>Thêm phiếu mượn</h3>
-        <div class="form-group">
-          <label>Mã phiếu:</label>
-          <input v-model="phieuMoi.maPhieuMuon" />
-        </div>
-        <div class="form-group">
-          <label>Ngày mượn:</label>
-          <input type="date" v-model="phieuMoi.ngayMuon" />
-        </div>
-          <div class="form-group">
-          <label>Khách hàng:</label>
-          <select v-model="phieuMoi.khachHang">
-            <option v-for="kh in khachHangs" :key="kh.id" :value="kh.id">
-              {{ kh.tenKhachHang }}
-            </option>
-          </select>
-        </div>
-        <div style="text-align:right;">
-          <button class="btn-luu" @click="themPhieuMoi">Lưu</button>
-          <button class="btn-huy" @click="hienModalThem = false" style="margin-left:10px;">Hủy</button>
         </div>
       </div>
     </div>
@@ -174,7 +147,6 @@ const soLuongTheoSach = reactive({})
 
 const hienModalNhapThongTinKh = ref(false)
 const hienModalChonSach = ref(false)
-const hienModalThem = ref(false)
 const hienModalKhachMuon = ref(false)
 
 const phieuMuonIdChonSach = ref(null)
@@ -258,51 +230,33 @@ async function xemKhachMuon(sach) {
   }
 }
 
-async function moModalThemMoi() {
+async function taoPhieuMuonNhanh() {
   try {
-    const res = await checkThongTinKhachHang();
-    const daCoThongTin = res.data;
-    console.log("Kết quả check thông tin KH:", res.data);
+    const res = await checkThongTinKhachHang()
+    const thongTin = res.data
+    console.log("Kết quả check thông tin KH:", thongTin)
 
-    if (daCoThongTin === true) {
-      hienModalThem.value = true;
-      phieuMoi.value = {
-        maPhieuMuon: '',
-        ngayMuon: '',
-        ngayTra: '',
-        khachHang: daCoThongTin.id,
-        trangThai: true
-      };
-    } else {
-      hienModalNhapThongTinKh.value = true;
+    if (thongTin === false) {
+      hienModalNhapThongTinKh.value = true
+      return
     }
-  } catch (err) {
-    toast.error("Không thể kiểm tra thông tin tài khoản. Vui lòng đăng nhập lại.");
-    console.error("Chi tiết lỗi khi check thông tin:", err);
-  }
-}
 
-async function themPhieuMoi() {
-  try {
-    await addPhieuMuon(phieuMoi.value)
-    toast.success('Tạo phiếu mượn thành công')
-    hienModalThem.value = false
+    const phieu = {
+      maPhieuMuon: '',
+      ngayMuon: '',
+      ngayTra: '',
+      khachHang: thongTin.idKhachHang,
+      trangThai: true
+    }
+
+    await addPhieuMuon(phieu)
+    toast.success("Tạo phiếu mượn thành công")
     await loadPhieuMuon()
   } catch (err) {
-    toast.error("Tạo phiếu thất bại")
-    console.log(err)
+    const msg = err?.response?.data?.message || "Tạo phiếu thất bại"
+    toast.error(msg)
+    console.error("Chi tiết lỗi:", err)
   }
-}
-
-function moModalThemMoiKh() {
-  hienModalNhapThongTinKh.value = true;
-  khachHangMoi.value = {
-    maKhachHang: '',
-    tenKhachHang: '',
-    diaChi: '',
-    email: '',
-    sdt: ''
-  };
 }
 
 async function themKhachHang() {
@@ -314,14 +268,16 @@ async function themKhachHang() {
     }
     await addKhachHang(khachHangMoi.value)
     toast.success("Thêm khách hàng thành công")
-    hienModalThemKh.value = false
+    hienModalNhapThongTinKh.value = false
     await loadKhachHang()
-    if (isUser) moModalThemMoi()
+    await loadPhieuMuon()
+
   } catch (err) {
     toast.error("Thêm KH thất bại")
     console.log(err)
   }
 }
+
 
 async function xoaPhieu(pm) {
   if (confirm(`Xóa phiếu ${pm.maPhieuMuon}?`)) {
@@ -380,8 +336,9 @@ async function luuChiTietPhieuMuon() {
     hienModalChonSach.value = false
     await loadPhieuMuon()
   } catch (err) {
-    toast.error("Thêm chi tiết phiếu thất bại")
-    console.log(err)
+    const errorMsg = err?.response?.data?.message || "Thêm chi tiết phiếu thất bại"
+    toast.error(errorMsg)
+    console.error("Chi tiết lỗi thêm chi tiết phiếu:", err)
   }
 }
 

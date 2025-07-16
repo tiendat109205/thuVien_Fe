@@ -3,7 +3,6 @@
     <!-- danh sách khách hàng -->
     <div class="list" style="margin-top: 40px;">
       <h2>Danh sách khách hàng</h2>
-      <button v-if="isAdmin" class="btn them-moi" @click="moModalThemMoiKh">+ Thêm khách hàng</button>
       <div class="row-kh header-kh">
         <div v-for="(title,i) in khachHangHeader" :key="i">{{ title }}</div>
       </div>
@@ -15,7 +14,7 @@
         <div>{{ kh.email }}</div>
         <div>{{ kh.sdt }}</div>
         <div class="hanh-dong">
-          <button v-if="isAdmin" class="btn sua" @click.stop="suaKhachHang(kh)">Sửa</button>
+          <button class="btn sua" @click.stop="suaKhachHang(kh)">Sửa</button>
           <button v-if="isAdmin" class="btn xoa" @click.stop="xoaKhachHang(kh)">Xóa</button>
         </div>
       </div>
@@ -93,7 +92,7 @@
 <script setup>
 import { ref, onMounted, watch, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
-import { addKhachHang, deleteKhachHang, getAllKhachHang, getAllPhieuMuon, traSachh, updateKhachHang, xemSachMuon } from '../api/api'
+import { deleteKhachHang, getAllKhachHang, getAllPhieuMuon, traSachh, updateKhachHang, xemSachMuon } from '../api/api'
 import { hasRole, hasAnyRole } from '../api/axiosInstance';
 
 const isAdmin = hasRole("ROLE_ADMIN");
@@ -184,7 +183,7 @@ async function capNhatKhachHang() {
       toast.error('Bạn không có quyền thực hiện thao tác này!');
     } else {
       const message = err.response?.data?.message || err.response?.data || 'Đã xảy ra lỗi';
-      toast.error(`Cập nhật thất bại: ${message}`);
+      toast.error(message);
     }
     console.error('Cập nhật KH lỗi:', err);
   }
@@ -230,21 +229,21 @@ async function traSach(s) {
     return
   }
   if (soLuongTra > soLuongDangMuon) {
-    toast.error(`Bạn chỉ có ${soLuongDangMuon} cuốn`)
+    toast.error(`Bạn chỉ có ${soLuongDangMuon} cuốn sách để trả`)
     return
   }
-  if (confirm(`Bạn có chắc chắn muốn trả ${soLuongTra} cuốn sách "${s.tenSach}"?`)) {
-    try {
-      await traSachh(s.id,soLuongTra)
-      toast.success('Trả sách thành công')
-      await xemSachDaMuon(khachHangMuon.value)
-      await loadPhieuMuon()
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi trả sách')
-      console.error(error)
-    }
+  const xacNhan = confirm(`Bạn có chắc muốn trả ${soLuongTra} cuốn sách "${s.tenSach}"?`)
+  if (!xacNhan) return
+  try {
+    await traSachh(s.id, soLuongTra)
+    toast.success('Trả sách thành công')
+  } catch (error) {
+    const message = error?.response?.data?.message || "Có lỗi xảy ra khi trả sách"
+    toast.error(message)
+    console.error("Chi tiết lỗi trả sách:", error)
   }
   await xemSachDaMuon(khachHangMuon.value)
+  await loadPhieuMuon()
   emit('sauKhiTraSach')
 }
 </script>

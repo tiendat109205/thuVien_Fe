@@ -39,14 +39,14 @@ const submit = async () => {
     localStorage.setItem("username", res.data.username);
     localStorage.setItem("role", res.data.vaiTro);
     localStorage.setItem("userId", res.data.id);
-console.log("userId lưu vào localStorage:", res.data.id);
+    console.log("userId lưu vào localStorage:", res.data.id);
     const role = res.data.vaiTro;
     console.log(role)
       router.push('/thu-vien');
       toast.success("Đăng nhập thành công với: "+role)
   } catch (err) {
     console.error("Đăng nhập thất bại:", err.response?.data || err.message);
-    error.value = err.response?.data || "Sai tên đăng nhập hoặc mật khẩu";
+    toast.error(err.response?.data || "Sai tên đăng nhập hoặc mật khẩu")
   }
 };
 </script>
