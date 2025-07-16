@@ -35,10 +35,6 @@ const submit = async () => {
 
     console.log("Token từ backend:", res.data.token);
 
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("username", res.data.username);
-    localStorage.setItem("role", res.data.vaiTro);
-    localStorage.setItem("userId", res.data.id);
     console.log("userId lưu vào localStorage:", res.data.id);
     const role = res.data.vaiTro;
     console.log(role)
