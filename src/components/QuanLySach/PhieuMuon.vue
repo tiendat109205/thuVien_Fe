@@ -8,12 +8,12 @@
       </div>
       <div class="row" v-for="(pm, index) in phieuMuons" :key="pm.id">
         <div>{{ index + 1 }}</div>
-        <div>{{ pm.maPhieuMuon }}</div>
-        <div>{{ pm.khachHang }}</div>
-        <div>{{ formatDate(pm.ngayMuon) }}</div>
-        <div>{{ formatDate(pm.ngayHetHan) }}</div>
-        <div :class="getTrangThaiClass(pm.trangThai)">
-          {{ pm.trangThai === true || pm.trangThai === 'true' ? 'Đã trả' : 'Chưa trả' }}
+        <div>{{ pm.loanVoucherCode }}</div>
+        <div>{{ pm.customer }}</div>
+        <div>{{ formatDate(pm.borrowDate) }}</div>
+        <div>{{ formatDate(pm.expiryDate) }}</div>
+        <div :class="getTrangThaiClass(pm.status)">
+          {{ pm.status === true || pm.status === 'true' ? 'Đã trả' : 'Chưa trả' }}
         </div>
         <div class="hanh-dong">
           <button v-if="isAdmin" class="btn xoa" @click="xoaPhieu(pm)">Xóa</button>
@@ -35,16 +35,16 @@
         <div class="row-sach" v-for="(sach, index) in danhSachSach" :key="sach.id" @click="xemKhachMuon(sach)">
           <div><input type="checkbox" :value="sach.id" v-model="idsDaChon" @click.stop/></div>
           <div>{{ index + 1 }}</div>
-          <div>{{ sach.maSach }}</div>
-          <div>{{ sach.tenSach }}</div>
-          <div>{{ sach.tacGia }}</div>
-          <div>{{ sach.nhaXuatBan }}</div>
-          <div>{{ sach.namPhatHanh }}</div>
-          <div>{{ sach.theLoai }}</div>
-          <div>{{ sach.soLuong }}</div>
+          <div>{{ sach.bookCode }}</div>
+          <div>{{ sach.bookName }}</div>
+          <div>{{ sach.author }}</div>
+          <div>{{ sach.publisher }}</div>
+          <div>{{ sach.yearToRelease }}</div>
+          <div>{{ sach.genre }}</div>
+          <div>{{ sach.quantity }}</div>
           <div v-if="idsDaChon.includes(sach.id)" class="box">
             <button @click.stop="giam(sach.id)">-</button>
-            <input type="number" min="1" :max="sach.soLuong" v-model.number="soLuongTheoSach[sach.id]" @click.stop style="width: 60px; text-align: center"/>
+            <input type="number" min="1" :max="sach.quantity" v-model.number="soLuongTheoSach[sach.id]" @click.stop style="width: 60px; text-align: center"/>
             <button @click.stop="tang(sach.id)">+</button>
           </div>
         </div>
@@ -71,11 +71,11 @@
           <tbody>
             <tr v-for="(kh, i) in danhSachKhachMuon" :key="i">
               <td>{{ i + 1 }}</td>
-              <td>{{ kh.maKhachHang }}</td>
-              <td>{{ kh.tenKhachHang }}</td>
+              <td>{{ kh.customerCode }}</td>
+              <td>{{ kh.customerName }}</td>
               <td>{{ kh.email }}</td>
-              <td>{{ kh.sdt }}</td>
-              <td>{{ formatDate(kh.ngayMuon) }}</td>
+              <td>{{ kh.phoneNumber }}</td>
+              <td>{{ formatDate(kh.borrowDate) }}</td>
             </tr>
           </tbody>
         </table>
@@ -92,15 +92,15 @@
           <h3>Vui lòng nhập thông tin khách hàng để tiếp tục mượn sách</h3>
           <div class="form-group">
             <label>Mã KH:</label>
-            <input v-model="khachHangMoi.maKhachHang" />
+            <input v-model="khachHangMoi.customerCode" />
           </div>
           <div class="form-group">
             <label>Tên KH:</label>
-            <input v-model="khachHangMoi.tenKhachHang" />
+            <input v-model="khachHangMoi.customerName" />
           </div>
           <div class="form-group">
             <label>Địa chỉ:</label>
-            <input v-model="khachHangMoi.diaChi" />
+            <input v-model="khachHangMoi.address" />
           </div>
           <div class="form-group">
             <label>Email:</label>
@@ -108,7 +108,7 @@
           </div>
           <div class="form-group">
             <label>SDT:</label>
-            <input v-model="khachHangMoi.sdt" />
+            <input v-model="khachHangMoi.phoneNumber" />
           </div>
           <div style="text-align:right;">
             <button class="btn-luu" @click="themKhachHang">Lưu</button>
@@ -153,9 +153,9 @@ const phieuMuonIdChonSach = ref(null)
 const ngayHetHan = ref(null)
 
 const khachHangMoi = ref({})
-const phieuMoi = ref({})
 const sachMuon = ref({})
 
+const emit = defineEmits(['reload'])
 const props = defineProps(['reloadKey'])
 
 watch(() => props.reloadKey, async () => {
@@ -201,11 +201,11 @@ async function loadPhieuMuon() {
 
 async function loadKhachHang() {
   try {
-    const res = await getAllKhachHang()
+    const res = await getAllKhachHang();
     khachHangs.value = res.data
   } catch (err) {
-    toast.error("Lỗi khi load khách hàng")
-    console.log(err)
+    console.log("Không load được khách hàng", err)
+    alert("Phiên đăng nhập hết hạn hoặc không có quyền!")
   }
 }
 
@@ -242,16 +242,17 @@ async function taoPhieuMuonNhanh() {
     }
 
     const phieu = {
-      maPhieuMuon: '',
-      ngayMuon: '',
-      ngayTra: '',
-      khachHang: thongTin.idTaiKhoan,
-      trangThai: true
+      loanVoucherCode: '',
+      borrowDate: '',
+      returnDate: '',
+      customer: thongTin.idAccount,
+      status: true
     }
-console.log("Data gửi đi:", phieu);
+    console.log("Data gửi đi:", phieu);
     await addPhieuMuon(phieu)
     toast.success("Tạo phiếu mượn thành công")
     await loadPhieuMuon()
+    await loadKhachHang()
   } catch (err) {
     const msg = err?.response?.data?.message || "Tạo phiếu thất bại"
     toast.error(msg)
@@ -261,26 +262,27 @@ console.log("Data gửi đi:", phieu);
 
 async function themKhachHang() {
   try {
-    const isUser = hasRole("ROLE_USER")
-    const userId = localStorage.getItem("userId")
+    const isUser = hasRole("ROLE_USER");
+    const userId = localStorage.getItem("userId");
     if (isUser && userId) {
-      khachHangMoi.value.idTaiKhoan = userId
+      khachHangMoi.value.idAccount = userId;
     }
-    await addKhachHang(khachHangMoi.value)
-    toast.success("Thêm khách hàng thành công")
-    hienModalNhapThongTinKh.value = false
-    await loadKhachHang()
-    await loadPhieuMuon()
+    await addKhachHang(khachHangMoi.value);
+    toast.success("Thêm khách hàng thành công");
+    hienModalNhapThongTinKh.value = false;
 
+    await loadKhachHang();
+    await loadPhieuMuon();
+    emit('reloadKhachHang');
   } catch (err) {
-    toast.error("Thêm KH thất bại")
-    console.log(err)
+    toast.error("Thêm KH thất bại");
+    console.log(err);
   }
 }
 
 
 async function xoaPhieu(pm) {
-  if (confirm(`Xóa phiếu ${pm.maPhieuMuon}?`)) {
+  if (confirm(`Xóa phiếu ${pm.loanVoucherCode}?`)) {
     try {
       await deletePhieuMuon(pm.id)
       toast.success("Xóa thành công")
@@ -324,12 +326,12 @@ async function luuChiTietPhieuMuon() {
   }
   try {
     const body = {
-      phieuMuonId: phieuMuonIdChonSach.value,
-      sachChiTiet: idsDaChon.value.map(id => ({
-        sachId: id,
-        soLuong: soLuongTheoSach[id] || 1
+      loanVoucherId: phieuMuonIdChonSach.value,
+      bookDetails: idsDaChon.value.map(id => ({
+        bookId: id,
+        quantityBorrow: soLuongTheoSach[id] || 1
       })),
-      ngayHetHan: ngayHetHan.value
+      expiryDate: ngayHetHan.value
     }
     await addChiTietPhieuMuon(body)
     toast.success('Mượn sách thành công')

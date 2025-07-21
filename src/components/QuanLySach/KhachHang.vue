@@ -8,11 +8,11 @@
       </div>
       <div class="row-kh" v-for="(kh, index) in khachHangs" :key="kh.id" @click="xemSachDaMuon(kh)">
         <div>{{ index + 1 }}</div>
-        <div>{{ kh.maKhachHang }}</div>
-        <div>{{ kh.tenKhachHang }}</div>
-        <div>{{ kh.diaChi }}</div>
+        <div>{{ kh.customerCode }}</div>
+        <div>{{ kh.customerName }}</div>
+        <div>{{ kh.address }}</div>
         <div>{{ kh.email }}</div>
-        <div>{{ kh.sdt }}</div>
+        <div>{{ kh.phoneNumber }}</div>
         <div class="hanh-dong">
           <button class="btn sua" @click.stop="suaKhachHang(kh)">Sửa</button>
           <button v-if="isAdmin" class="btn xoa" @click.stop="xoaKhachHang(kh)">Xóa</button>
@@ -26,15 +26,15 @@
         <h3>Sửa khách hàng</h3>
         <div class="form-group">
           <label>Mã KH:</label>
-          <input v-model="khachHangSua.maKhachHang"/>
+          <input v-model="khachHangSua.customerCode"/>
         </div>
         <div class="form-group">
           <label>Tên KH:</label>
-          <input type="text" v-model="khachHangSua.tenKhachHang" />
+          <input type="text" v-model="khachHangSua.customerName" />
         </div>
         <div class="form-group">
           <label>Địa chỉ:</label>
-          <input type="text" v-model="khachHangSua.diaChi" />
+          <input type="text" v-model="khachHangSua.address" />
         </div>
         <div class="form-group">
           <label>Email:</label>
@@ -42,7 +42,7 @@
         </div>
         <div class="form-group">
           <label>Sdt:</label>
-          <input type="text" v-model="khachHangSua.sdt" />
+          <input type="text" v-model="khachHangSua.phoneNumber" />
         </div>
         <div style="text-align:right;">
           <button class="btn-luu" @click="capNhatKhachHang">Lưu</button>
@@ -54,7 +54,7 @@
     <!-- modal xem khách hàng mượn những sách nào -->
      <div v-if="hienModalSachDaMuon" class="modal-overlay" @click.self="hienModalSachDaMuon = false">
         <div class="modal-content sach-modal">
-            <h3 style="margin-bottom: 16px;">Số sách {{ khachHangMuon.tenKhachHang }} mượn</h3>
+            <h3 style="margin-bottom: 16px;">Số sách {{ khachHangMuon.customerName }} mượn</h3>
             <div v-if="sachDaMuon.length>0">
                 <table>
                     <thead>
@@ -65,13 +65,13 @@
                     <tbody>
                         <tr v-for="(s,index) in sachDaMuon":key="index">
                             <td>{{ index+1 }}</td>
-                            <td>{{ s.maSach }}</td>
-                            <td>{{ s.tenSach }}</td>
-                            <td>{{ s.tacGia }}</td>
-                            <td>{{ s.nhaXuatBan }}</td>
-                            <td>{{ formatDate(s.ngayMuon) }}</td>
-                            <td>{{ formatDate(s.ngayHetHan) }}</td>
-                            <td>{{ s.soLuongSachMuon }}</td>
+                            <td>{{ s.bookCode }}</td>
+                            <td>{{ s.bookName }}</td>
+                            <td>{{ s.author }}</td>
+                            <td>{{ s.publisher }}</td>
+                            <td>{{ formatDate(s.borrowDate) }}</td>
+                            <td>{{ formatDate(s.expiryDate) }}</td>
+                            <td>{{ s.numberBookBorrow }}</td>
                             <td>
                             <button class="traSachBtn" @click="traSach(s)">Trả</button>
                           </td>
@@ -80,7 +80,7 @@
                 </table>
             </div>
             <div v-else>
-                <p>{{ khachHangMuon.tenKhachHang }} không mượn sách</p>
+                <p>{{ khachHangMuon.customerName }} không mượn sách</p>
             </div>
             <div class="modal-actions">
                 <button @click="hienModalSachDaMuon = false" class="btn dong">Đóng</button>
@@ -98,7 +98,7 @@ import { hasRole, hasAnyRole } from '../api/axiosInstance';
 const isAdmin = hasRole("ROLE_ADMIN");
 
 const toast = useToast()
-const emit = defineEmits(['sauKhiTraSach'])
+const emit = defineEmits(['sauKhiTraSach', 'reload']) // Thêm 'reload' vào
 
 const phieuMuons = ref([])
 const khachHangs = ref([])
@@ -116,8 +116,8 @@ const khachHangMuon = ref({})
 const props = defineProps(['reloadKey'])
 
 watch(() => props.reloadKey, async () => {
-  await loadPhieuMuon()
-})
+  await loadKhachHang();
+}, { immediate: true });
 
 watch(idsDaChon, (newIds) => {
   newIds.forEach(id => {
@@ -173,6 +173,8 @@ function suaKhachHang(kh) {
 }
 
 async function capNhatKhachHang() {
+  console.log("ID:", khachHangSua.value.id)
+    console.log("Data gửi lên:", khachHangSua.value)
   try{
     await updateKhachHang(khachHangSua.value.id,khachHangSua.value)
     toast.success('Cập nhật thành công')
@@ -190,7 +192,7 @@ async function capNhatKhachHang() {
 }
 
 async function xoaKhachHang(kh) {
-  if (confirm(`Bạn có muốn xóa khách: ${kh.maKhachHang}?`)) {
+  if (confirm(`Bạn có muốn xóa khách: ${kh.customerCode}?`)) {
     try{
       await deleteKhachHang(kh.id)
       toast.success('Xóa thành công')
@@ -220,7 +222,7 @@ async function xemSachDaMuon(kh) {
 }
 
 async function traSach(s) {
-  const soLuongDangMuon = s.soLuongSachMuon || 0
+  const soLuongDangMuon = s.numberBookBorrow || 0
   const input = prompt(`Nhập số lượng muốn trả:`)
   if (!input) return
   const soLuongTra = parseInt(input)
@@ -232,7 +234,7 @@ async function traSach(s) {
     toast.error(`Bạn chỉ có ${soLuongDangMuon} cuốn sách để trả`)
     return
   }
-  const xacNhan = confirm(`Bạn có chắc muốn trả ${soLuongTra} cuốn sách "${s.tenSach}"?`)
+  const xacNhan = confirm(`Bạn có chắc muốn trả ${soLuongTra} cuốn sách "${s.bookName}"?`)
   if (!xacNhan) return
   try {
     await traSachh(s.id, soLuongTra)

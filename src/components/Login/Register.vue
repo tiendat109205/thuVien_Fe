@@ -29,8 +29,8 @@ const router = useRouter();
 const submit = async () => {
   try {
     await register({
-      tenDangNhap: username.value,
-      matKhau: password.value
+      username: username.value,
+      password: password.value
       // Không cần gửi vaiTro
     }); 
     router.push("/login")
@@ -38,6 +38,8 @@ const submit = async () => {
     username.value = '';
     password.value = '';
   } catch (err) {
+    console.log(username.value)
+    console.log(password.value)
     toast.error(err.response?.data)
   }
 };

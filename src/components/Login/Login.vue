@@ -2,8 +2,8 @@
   <div class="container">
     <h2>Đăng nhập</h2>
     <form @submit.prevent="submit">
-      <input v-model="username" placeholder="Tên đăng nhập" type="text"/>
-      <input v-model="password" type="password" placeholder="Mật khẩu"/>
+      <input v-model="username" placeholder="Tên đăng nhập" type="text" autocomplete="username"/>
+      <input v-model="password" type="password" placeholder="Mật khẩu" autocomplete="current-password"/>
       <button>Đăng nhập</button>
     </form>
     <p class="link">
@@ -29,14 +29,17 @@ const router = useRouter();
 const submit = async () => {
   try {
     const res = await login({
-      tenDangNhap: username.value,
-      matKhau: password.value
+      username: username.value,
+      password: password.value
     });
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("id", res.data.id);
+    localStorage.setItem("role", res.data.role);
 
     console.log("Token từ backend:", res.data.token);
 
     console.log("userId lưu vào localStorage:", res.data.id);
-    const role = res.data.vaiTro;
+    const role = res.data.role;
     console.log(role)
       router.push('/thu-vien');
       toast.success("Đăng nhập thành công với: "+role)
