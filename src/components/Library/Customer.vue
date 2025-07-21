@@ -92,7 +92,7 @@
 <script setup>
 import { ref, onMounted, watch, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
-import { deleteKhachHang, getAllKhachHang, getAllPhieuMuon, traSachh, updateKhachHang, xemSachMuon } from '../api/api'
+import { deleteCustomer, getAllCustomer, getAllLoanVoucher, returnBook, updateCustomer, getBookBorrow } from '../api/api'
 import { hasRole, hasAnyRole } from '../api/axiosInstance';
 
 const isAdmin = hasRole("ROLE_ADMIN");
@@ -139,7 +139,7 @@ const sachMuonHeader = ['STT','Mã sách','Tên sách','Tác giả','Nhà xuất
 
 async function loadPhieuMuon() {
   try {
-    const res = await getAllPhieuMuon();
+    const res = await getAllLoanVoucher();
     phieuMuons.value = res.data
     console.log(res.data)
   } catch (err) {
@@ -150,7 +150,7 @@ async function loadPhieuMuon() {
 
 async function loadKhachHang() {
   try {
-    const res = await getAllKhachHang();
+    const res = await getAllCustomer();
     khachHangs.value = res.data
   } catch (err) {
     console.log("Không load được khách hàng", err)
@@ -176,7 +176,7 @@ async function capNhatKhachHang() {
   console.log("ID:", khachHangSua.value.id)
     console.log("Data gửi lên:", khachHangSua.value)
   try{
-    await updateKhachHang(khachHangSua.value.id,khachHangSua.value)
+    await updateCustomer(khachHangSua.value.id,khachHangSua.value)
     toast.success('Cập nhật thành công')
     hienModalSuaKh.value = false
     await loadKhachHang() 
@@ -194,7 +194,7 @@ async function capNhatKhachHang() {
 async function xoaKhachHang(kh) {
   if (confirm(`Bạn có muốn xóa khách: ${kh.customerCode}?`)) {
     try{
-      await deleteKhachHang(kh.id)
+      await deleteCustomer(kh.id)
       toast.success('Xóa thành công')
       await loadKhachHang()
     }catch(err){
@@ -212,7 +212,7 @@ async function xoaKhachHang(kh) {
 async function xemSachDaMuon(kh) {
   khachHangMuon.value = kh
   try {
-    const res = await xemSachMuon(kh.id);
+    const res = await getBookBorrow(kh.id);
     sachDaMuon.value = res.data
     hienModalSachDaMuon.value = true
   } catch (err) {
@@ -237,7 +237,7 @@ async function traSach(s) {
   const xacNhan = confirm(`Bạn có chắc muốn trả ${soLuongTra} cuốn sách "${s.bookName}"?`)
   if (!xacNhan) return
   try {
-    await traSachh(s.id, soLuongTra)
+    await returnBook(s.id, soLuongTra)
     toast.success('Trả sách thành công')
   } catch (error) {
     const message = error?.response?.data?.message || "Có lỗi xảy ra khi trả sách"

@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Login from '@/components/Login/Login.vue';
-import ThuVien from '@/components/QuanLySach/ThuVien.vue';
-import KhachHang from '@/components/QuanLySach/KhachHang.vue';
-import PhieuMuon from '@/components/QuanLySach/PhieuMuon.vue';
+import Library from '@/components/Library/Library.vue';
+import Customer from '@/components/Library/Customer.vue';
+import LoanVoucher from '@/components/Library/LoanVoucher.vue';
 import Unauthorized from '@/components/Login/Unauthorized.vue';
 import Register from '@/components/Login/Register.vue';
 
@@ -13,17 +13,17 @@ const routes = [
   { path: '/register', component: Register },
   {
     path: '/thu-vien',
-    component: ThuVien,
+    component: Library,
     meta: { requiresAuth: true, roles: ['ROLE_ADMIN', 'ROLE_USER'] }
   },
   {
     path: '/phieu-muon',
-    component: PhieuMuon,
+    component: LoanVoucher,
     meta: { requiresAuth: true, roles: ['ROLE_ADMIN','ROLE_ADMIN'] }
   },
   {
     path: '/khach-hang',
-    component: KhachHang,
+    component: Customer,
     meta: { requiresAuth: true, roles: ['ROLE_USER','ROLE_ADMIN'] }
   },
 

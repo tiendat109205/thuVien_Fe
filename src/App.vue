@@ -7,10 +7,10 @@
 <script>
 import Login from './components/Login/Login.vue'
 import Register from './components/Login/Register.vue'
-import ThuVien from './components/QuanLySach/ThuVien.vue'
+import Library from './components/Library/Library.vue'
 
 export default {
-  components: { Login, Register,ThuVien },
+  components: { Login, Register,Library },
   data() {
     return {
       view: 'Login'  

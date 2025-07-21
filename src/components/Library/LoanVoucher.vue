@@ -123,15 +123,15 @@
 import { ref, onMounted, watch, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
 import {
-  addChiTietPhieuMuon,
-  addPhieuMuon,
-  deletePhieuMuon,
-  getAllKhachHang,
-  getAllPhieuMuon,
-  getAllSach,
-  xemKhachMuonn,
-  checkThongTinKhachHang,
-  addKhachHang
+  addLoanVoucherDetail,
+  addLoanVoucher,
+  deleteLoanVoucher,
+  getAllCustomer,
+  getAllLoanVoucher,
+  getAllBook,
+  getCustomerBorrow,
+  checkInfomation,
+  addCustomer
 } from '../api/api'
 import { hasRole } from '../api/axiosInstance'
 
@@ -191,7 +191,7 @@ function tang(id) {
 
 async function loadPhieuMuon() {
   try {
-    const res = await getAllPhieuMuon()
+    const res = await getAllLoanVoucher()
     phieuMuons.value = res.data
   } catch (err) {
     toast.error("Lỗi khi load phiếu mượn")
@@ -201,7 +201,7 @@ async function loadPhieuMuon() {
 
 async function loadKhachHang() {
   try {
-    const res = await getAllKhachHang();
+    const res = await getAllCustomer();
     khachHangs.value = res.data
   } catch (err) {
     console.log("Không load được khách hàng", err)
@@ -221,7 +221,7 @@ function formatDate(dateStr) {
 async function xemKhachMuon(sach) {
   try {
     sachMuon.value = sach
-    const res = await xemKhachMuonn(sach.id)
+    const res = await getCustomerBorrow(sach.id)
     danhSachKhachMuon.value = res.data
     hienModalKhachMuon.value = true
   } catch (err) {
@@ -232,7 +232,7 @@ async function xemKhachMuon(sach) {
 
 async function taoPhieuMuonNhanh() {
   try {
-    const res = await checkThongTinKhachHang()
+    const res = await checkInfomation()
     const thongTin = res.data
     console.log("Kết quả check thông tin KH:", thongTin)
 
@@ -249,7 +249,7 @@ async function taoPhieuMuonNhanh() {
       status: true
     }
     console.log("Data gửi đi:", phieu);
-    await addPhieuMuon(phieu)
+    await addLoanVoucher(phieu)
     toast.success("Tạo phiếu mượn thành công")
     await loadPhieuMuon()
     await loadKhachHang()
@@ -267,7 +267,7 @@ async function themKhachHang() {
     if (isUser && userId) {
       khachHangMoi.value.idAccount = userId;
     }
-    await addKhachHang(khachHangMoi.value);
+    await addCustomer(khachHangMoi.value);
     toast.success("Thêm khách hàng thành công");
     hienModalNhapThongTinKh.value = false;
 
@@ -284,7 +284,7 @@ async function themKhachHang() {
 async function xoaPhieu(pm) {
   if (confirm(`Xóa phiếu ${pm.loanVoucherCode}?`)) {
     try {
-      await deletePhieuMuon(pm.id)
+      await deleteLoanVoucher(pm.id)
       toast.success("Xóa thành công")
       await loadPhieuMuon()
     } catch (err) {
@@ -303,7 +303,7 @@ function moModalChonSach(idPhieu) {
   hienModalChonSach.value = true
   idsDaChon.value = []
   ngayHetHan.value = null
-  getAllSach().then(res => {
+  getAllBook().then(res => {
     danhSachSach.value = res.data
   }).catch(err => {
     toast.error("Lỗi khi load sách")
@@ -333,7 +333,7 @@ async function luuChiTietPhieuMuon() {
       })),
       expiryDate: ngayHetHan.value
     }
-    await addChiTietPhieuMuon(body)
+    await addLoanVoucherDetail(body)
     toast.success('Mượn sách thành công')
     hienModalChonSach.value = false
     await loadPhieuMuon()
