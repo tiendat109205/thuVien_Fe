@@ -2,68 +2,68 @@
   <div class="container">
     <!-- danh sách khách hàng -->
     <div class="list" style="margin-top: 40px;">
-      <h2>Danh sách khách hàng</h2>
+      <h2>List Customer</h2>
       <div class="row-kh header-kh">
-        <div v-for="(title,i) in khachHangHeader" :key="i">{{ title }}</div>
+        <div v-for="(title,i) in customerHeader" :key="i">{{ title }}</div>
       </div>
-      <div class="row-kh" v-for="(kh, index) in khachHangs" :key="kh.id" @click="xemSachDaMuon(kh)">
+      <div class="row-kh" v-for="(kh, index) in customer" :key="kh.id" @click="viewBookBorrow(kh)">
         <div>{{ index + 1 }}</div>
         <div>{{ kh.customerCode }}</div>
         <div>{{ kh.customerName }}</div>
         <div>{{ kh.address }}</div>
         <div>{{ kh.email }}</div>
         <div>{{ kh.phoneNumber }}</div>
-        <div class="hanh-dong">
-          <button class="btn sua" @click.stop="suaKhachHang(kh)">Sửa</button>
-          <button v-if="isAdmin" class="btn xoa" @click.stop="xoaKhachHang(kh)">Xóa</button>
+        <div class="status">
+          <button class="btn update" @click.stop="updateCus(kh)">Update</button>
+          <button v-if="isAdmin" class="btn delete" @click.stop="deleteCus(kh)">Delete</button>
         </div>
       </div>
     </div>
 
     <!-- update khách hàng -->
-    <div v-if="hienModalSuaKh" class="modal-overlay" @click.self="hienModalSuaKh = false">
+    <div v-if="showModalUpdateCus" class="modal-overlay" @click.self="showModalUpdateCus = false">
       <div class="modal-content">
-        <h3>Sửa khách hàng</h3>
+        <h3>Update Customer</h3>
         <div class="form-group">
-          <label>Mã KH:</label>
-          <input v-model="khachHangSua.customerCode"/>
+          <label>Customer Code:</label>
+          <input v-model="UCustomer.customerCode"/>
         </div>
         <div class="form-group">
-          <label>Tên KH:</label>
-          <input type="text" v-model="khachHangSua.customerName" />
+          <label>Customer Name:</label>
+          <input type="text" v-model="UCustomer.customerName" />
         </div>
         <div class="form-group">
-          <label>Địa chỉ:</label>
-          <input type="text" v-model="khachHangSua.address" />
+          <label>Address:</label>
+          <input type="text" v-model="UCustomer.address" />
         </div>
         <div class="form-group">
           <label>Email:</label>
-          <input type="email" v-model="khachHangSua.email" />
+          <input type="email" v-model="UCustomer.email" />
         </div>
         <div class="form-group">
-          <label>Sdt:</label>
-          <input type="text" v-model="khachHangSua.phoneNumber" />
+          <label>Phone number:</label>
+          <input type="text" v-model="UCustomer.phoneNumber" />
         </div>
         <div style="text-align:right;">
-          <button class="btn-luu" @click="capNhatKhachHang">Lưu</button>
-          <button class="btn-huy" @click="hienModalSuaKh = false" style="margin-left:10px;">Hủy</button>
+          <button class="btn-save" @click="customerUpdate">Save</button>
+          <button class="btn-cancel" @click="showModalUpdateCus = false" style="margin-left:10px;">Cancel</button>
         </div>
       </div>
     </div>
 
     <!-- modal xem khách hàng mượn những sách nào -->
-     <div v-if="hienModalSachDaMuon" class="modal-overlay" @click.self="hienModalSachDaMuon = false">
-        <div class="modal-content sach-modal">
-            <h3 style="margin-bottom: 16px;">Số sách {{ khachHangMuon.customerName }} mượn</h3>
-            <div v-if="sachDaMuon.length>0">
+     <div v-if="showModalBookBorrow" class="modal-overlay" @click.self="showModalBookBorrow = false">
+        <div class="modal-content book-modal">
+            <h3 style="margin-bottom: 16px;">Quantity book {{ customerBorrow.customerName }} borrow</h3>
+            <div v-if="bookBorrow.length>0">
                 <table>
                     <thead>
                         <tr>
-                            <th v-for="(title,i) in sachMuonHeader" :key="i">{{ title }}</th>
+                            <th v-for="(title,i) in bookBorrowHeader" :key="i">{{ title }}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(s,index) in sachDaMuon":key="index">
+                        <tr v-for="(s,index) in bookBorrow":key="index">
                             <td>{{ index+1 }}</td>
                             <td>{{ s.bookCode }}</td>
                             <td>{{ s.bookName }}</td>
@@ -73,17 +73,17 @@
                             <td>{{ formatDate(s.expiryDate) }}</td>
                             <td>{{ s.numberBookBorrow }}</td>
                             <td>
-                            <button class="traSachBtn" @click="traSach(s)">Trả</button>
+                            <button class="returnBookBtn" @click="bookReturn(s)">Return</button>
                           </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
             <div v-else>
-                <p>{{ khachHangMuon.customerName }} không mượn sách</p>
+                <p>{{ customerBorrow.customerName }} don't borrow books</p>
             </div>
             <div class="modal-actions">
-                <button @click="hienModalSachDaMuon = false" class="btn dong">Đóng</button>
+                <button @click="showModalBookBorrow = false" class="btn cancel">Cancel</button>
             </div>
         </div>
      </div>
@@ -98,63 +98,61 @@ import { hasRole, hasAnyRole } from '../api/axiosInstance';
 const isAdmin = hasRole("ROLE_ADMIN");
 
 const toast = useToast()
-const emit = defineEmits(['sauKhiTraSach', 'reload']) // Thêm 'reload' vào
+const emit = defineEmits(['afterReturnBook', 'reload']) // Thêm 'reload' vào
 
-const phieuMuons = ref([])
-const khachHangs = ref([])
-const idsDaChon = ref([])
-const sachDaMuon = ref([])
+const loanVoucher = ref([])
+const customer = ref([])
+const selectBook = ref([])
+const bookBorrow = ref([])
 
-const soLuongTheoSach = reactive({})
+const quantityByBook = reactive({})
 
-const hienModalSuaKh = ref(false)
-const hienModalSachDaMuon = ref(false)
+const showModalUpdateCus = ref(false)
+const showModalBookBorrow = ref(false)
 
-const khachHangSua = ref({})
-const khachHangMuon = ref({})
+const UCustomer = ref({})
+const customerBorrow = ref({})
 
 const props = defineProps(['reloadKey'])
 
 watch(() => props.reloadKey, async () => {
-  await loadKhachHang();
+  await loadCustomer();
 }, { immediate: true });
 
-watch(idsDaChon, (newIds) => {
+watch(selectBook, (newIds) => {
   newIds.forEach(id => {
-    if (!soLuongTheoSach[id]) {
-      soLuongTheoSach[id] = 1
+    if (!quantityByBook[id]) {
+      quantityByBook[id] = 1
     }
   })
 })
 
 onMounted(async () => {
-  await loadPhieuMuon()
-  await loadKhachHang()
+  await loadLoanVoucher()
+  await loadCustomer()
 })
 
 
-const khachHangHeader = ['STT','Mã KH','Tên KH','Địa chỉ','Email','SĐT','Hành động']
-const sachMuonHeader = ['STT','Mã sách','Tên sách','Tác giả','Nhà xuất bản','Ngày mượn','Ngày hết hạn','Số lượng mượn','Hành động']
+const customerHeader = ['STT','Code','Name','Address','Email','Phone number','Activate']
+const bookBorrowHeader = ['STT','Code','Name','Author','Publishing','Borrowed date','Expiration date','Borrowed quantity','Activate']
 
 
-async function loadPhieuMuon() {
+async function loadLoanVoucher() {
   try {
     const res = await getAllLoanVoucher();
-    phieuMuons.value = res.data
+    loanVoucher.value = res.data
     console.log(res.data)
   } catch (err) {
-    console.error("Không load được phiếu mượn:", err)
-    alert("Phiên đăng nhập hết hạn hoặc không có quyền!")
+    console.error("Cannot load loan voucher form:", err)
   }
 }
 
-async function loadKhachHang() {
+async function loadCustomer() {
   try {
     const res = await getAllCustomer();
-    khachHangs.value = res.data
+    customer.value = res.data
   } catch (err) {
-    console.log("Không load được khách hàng", err)
-    alert("Phiên đăng nhập hết hạn hoặc không có quyền!")
+    console.log("Cannot load customer", err)
   }
 }
 
@@ -167,86 +165,86 @@ function formatDate(dateStr) {
   return `${dd}/${mm}/${yyyy}`
 }
 
-function suaKhachHang(kh) {
-  khachHangSua.value = {...kh}
-  hienModalSuaKh.value = true
+function updateCus(kh) {
+  UCustomer.value = {...kh}
+  showModalUpdateCus.value = true
 }
 
-async function capNhatKhachHang() {
-  console.log("ID:", khachHangSua.value.id)
-    console.log("Data gửi lên:", khachHangSua.value)
+async function customerUpdate() {
+    console.log("ID:", UCustomer.value.id)
+    console.log("Data gửi lên:", UCustomer.value)
   try{
-    await updateCustomer(khachHangSua.value.id,khachHangSua.value)
-    toast.success('Cập nhật thành công')
-    hienModalSuaKh.value = false
-    await loadKhachHang() 
+    await updateCustomer(UCustomer.value.id,UCustomer.value)
+    toast.success('Updated successfully')
+    showModalUpdateCus.value = false
+    await loadCustomer() 
   }catch(err){
     if (err.response && err.response.status === 403) {
-      toast.error('Bạn không có quyền thực hiện thao tác này!');
+      toast.error('You do not have permission to perform this action.!');
     } else {
-      const message = err.response?.data?.message || err.response?.data || 'Đã xảy ra lỗi';
+      const message = err.response?.data?.message || err.response?.data || 'An error has occurred';
       toast.error(message);
     }
-    console.error('Cập nhật KH lỗi:', err);
+    console.error('Sua Kh loi:', err);
   }
 }
 
-async function xoaKhachHang(kh) {
-  if (confirm(`Bạn có muốn xóa khách: ${kh.customerCode}?`)) {
+async function deleteCus(kh) {
+  if (confirm(`Do you want to delete the customer?: ${kh.customerCode}?`)) {
     try{
       await deleteCustomer(kh.id)
-      toast.success('Xóa thành công')
-      await loadKhachHang()
+      toast.success('Deleted successfully')
+      await loadCustomer()
     }catch(err){
       if (err.response && err.response.status === 403) {
-      toast.error('Bạn không có quyền thực hiện thao tác này!');
+      toast.error('You do not have permission to perform this action!');
     } else {
-      const message = err.response?.data?.message || err.response?.data || 'Đã xảy ra lỗi';
-      toast.error(`Xóa thất bại: ${message}`);
+      const message = err.response?.data?.message || err.response?.data || 'An error has occurred';
+      toast.error(`Delete failed: ${message}`);
     }
       console.error('Xóa KH lỗi:', err); 
     }
   }
 }
 
-async function xemSachDaMuon(kh) {
-  khachHangMuon.value = kh
+async function viewBookBorrow(kh) {
+  customerBorrow.value = kh
   try {
     const res = await getBookBorrow(kh.id);
-    sachDaMuon.value = res.data
-    hienModalSachDaMuon.value = true
+    bookBorrow.value = res.data
+    showModalBookBorrow.value = true
   } catch (err) {
-    toast.error('Lỗi khi tải danh sách')
+    toast.error('Error loading list book')
     console.log(err)
   }
 }
 
-async function traSach(s) {
-  const soLuongDangMuon = s.numberBookBorrow || 0
-  const input = prompt(`Nhập số lượng muốn trả:`)
+async function bookReturn(s) {
+  const quantityWanted = s.numberBookBorrow || 0
+  const input = prompt(`Enter the amount you want to pay:`)
   if (!input) return
-  const soLuongTra = parseInt(input)
-  if (isNaN(soLuongTra) || soLuongTra <= 0) {
-    toast.error('Số lượng trả không hợp lệ')
+  const quantityReturn = parseInt(input)
+  if (isNaN(quantityReturn) || quantityReturn <= 0) {
+    toast.error('Invalid payment quantity')
     return
   }
-  if (soLuongTra > soLuongDangMuon) {
-    toast.error(`Bạn chỉ có ${soLuongDangMuon} cuốn sách để trả`)
+  if (quantityReturn > quantityWanted) {
+    toast.error(`You just have ${quantityWanted} book to pay`)
     return
   }
-  const xacNhan = confirm(`Bạn có chắc muốn trả ${soLuongTra} cuốn sách "${s.bookName}"?`)
-  if (!xacNhan) return
+  const check = confirm(`Are you sure you want to pay ${quantityReturn} for the book "${s.bookName}"?`)
+  if (!check) return
   try {
-    await returnBook(s.id, soLuongTra)
-    toast.success('Trả sách thành công')
+    await returnBook(s.id, quantityReturn)
+    toast.success('Returned books successfully')
   } catch (error) {
-    const message = error?.response?.data?.message || "Có lỗi xảy ra khi trả sách"
+    const message = error?.response?.data?.message || "An error occurred while returning the book."
     toast.error(message)
     console.error("Chi tiết lỗi trả sách:", error)
   }
-  await xemSachDaMuon(khachHangMuon.value)
-  await loadPhieuMuon()
-  emit('sauKhiTraSach')
+  await viewBookBorrow(customerBorrow.value)
+  await loadLoanVoucher()
+  emit('afterReturnBook')
 }
 </script>
 <style scoped>
@@ -271,7 +269,7 @@ async function traSach(s) {
   border-bottom: 2px solid #eee;
   padding-bottom: 8px;
 }
-.hanh-dong {
+.status {
   display: flex;
   gap: 6px;
 }
@@ -283,14 +281,14 @@ async function traSach(s) {
   font-weight: bold;
   font-size: 12px;
 }
-.btn.sua {
+.btn.update {
   background: #ffc107;
 }
-.btn.xoa {
+.btn.delete {
   background: #dc3545;
   color: white;
 }
-.btn.them-moi {
+.btn.add {
   background: #28a745;
   color: white;
   margin-bottom: 12px;
@@ -356,7 +354,7 @@ async function traSach(s) {
   z-index: 999;
 }
 
-.modal-content.sach-modal {
+.modal-content.book-modal {
   background: white;
   padding: 24px;
   border-radius: 12px;
@@ -366,21 +364,21 @@ async function traSach(s) {
   overflow-x: auto;
 }
 
-.sach-table {
+.book-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
 }
 
-.sach-table th,
-.sach-table td {
+.book-table th,
+.book-table td {
   padding: 10px;
   border: 1px solid #ccc;
   text-align: center;
   font-size: 14px;
 }
 
-.sach-table th {
+.book-table th {
   background-color: #f5f5f5;
   font-weight: bold;
 }
@@ -390,7 +388,7 @@ async function traSach(s) {
   margin-top: 16px;
 }
 
-.btn.dong {
+.btn.cancel {
   padding: 8px 16px;
   background-color: #333;
   color: white;
@@ -399,7 +397,7 @@ async function traSach(s) {
   cursor: pointer;
 }
 
-.btn.dong:hover {
+.btn.cancel:hover {
   background-color: #555;
 }
 .row-kh:hover {
@@ -407,12 +405,12 @@ async function traSach(s) {
   cursor: pointer;
   transition: background-color 0.2s;
 }
-.row-sach:hover {
+.row-book:hover {
   background-color: #c7e9d3;
   cursor: pointer;
   transition: background-color 0.2s;
 }
-.btn-luu{
+.btn-save{
   padding: 3px 16px;
   background-color: green;
   color: white;
@@ -420,7 +418,7 @@ async function traSach(s) {
   border-radius: 6px;
   cursor: pointer;
 }
-.btn-huy{
+.btn-cancel{
   padding: 3px 16px;
   background-color: red;
   color: white;
@@ -428,7 +426,7 @@ async function traSach(s) {
   border-radius: 6px;
   cursor: pointer;
 }
-.traSachBtn {
+.returnBookBtn {
   padding: 5px 25px;
   background-color: #28a745;
   color: white;
@@ -439,7 +437,7 @@ async function traSach(s) {
   transition: background-color 0.3s ease;
 }
 
-.traSachBtn:hover {
+.returnBookBtn:hover {
   background-color: #218838;
 }
 </style>

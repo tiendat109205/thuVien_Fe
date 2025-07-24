@@ -28,8 +28,8 @@ export const getBookBorrow = (id) => {
   return axiosInstance.get(`${API_URL}/phieu-muon-chi-tiet/sach-da-muon/${id}`);
 };
 
-export const returnBook = (id, soLuongTra) => {
-  return axiosInstance.put(`${API_URL}/phieu-muon-chi-tiet/tra-sach/${id}?quantity=${soLuongTra}`);
+export const returnBook = (id, quantityReturn) => {
+  return axiosInstance.put(`${API_URL}/phieu-muon-chi-tiet/tra-sach/${id}?quantity=${quantityReturn}`);
 };
 
 export const checkInfomation = () => {

@@ -1,6 +1,6 @@
 <template>
-  <LoanVoucher :reloadKey="reloadKey" @reloadKhachHang="reloadDuLieu"/>
-  <Customer :reloadKey="reloadKey" @sauKhiTraSach="reloadDuLieu"/>
+  <LoanVoucher :reloadKey="reloadKey" @reloadCustomer="reloadDuLieu"/>
+  <Customer :reloadKey="reloadKey" @afterReturnBook="reloadDuLieu"/>
 </template>
 
 <script setup>
